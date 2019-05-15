@@ -1,15 +1,15 @@
-from loader import KMNISTDataLoader, LoadTestData
-# from models.wideresnet_deep import resnet
-from models.pyramidNet_bottleNeck_NoRelu import resnet
 import keras
-from DataAugmentation import MyImageDataGenerator, tta
-from datetime import datetime
-dir_name = datetime.now().strftime("%y%m%d_%H%M")
-# dir_name='190507_1700'
 import glob, os
 import pandas as pd
 import numpy as np
 import re
+from datetime import datetime
+dir_name = datetime.now().strftime("%y%m%d_%H%M")
+
+# my modules
+from loader import KMNISTDataLoader, LoadTestData
+from dataAugmentation import MyImageDataGenerator, TTA
+from networks.model import pyramidnet_bottleneck, wideresnet
 
 
 if __name__ == '__main__':
@@ -20,26 +20,28 @@ if __name__ == '__main__':
   test_imgs = LoadTestData(datapath)
 
   # define model
-  model = resnet()
+  model = pyramidnet_bottleneck()
   loss = keras.losses.categorical_crossentropy
   optimizer = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999)
   model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
-  # model.summary()
+  model.summary()
 
   # data generator
   datagen = MyImageDataGenerator(
     rotation_range=20,
     width_shift_range=0.1,
     height_shift_range=0.1,
+    shear_range=0.2,
+    zoom_range=0.08,
     #mix_up_alpha=1.2,
-    #random_crop=(28, 28)
-    random_erasing=True
+    #random_crop=(28, 28),
+    random_erasing=True,
   )
 
-  # train
+  # train setting
   batch_size = 128
   initial_epoch = 0
-  epochs = 5000
+  epochs = 3
   verbose = 1
   steps_per_epoch = train_imgs.shape[0] // batch_size
 
@@ -53,10 +55,12 @@ if __name__ == '__main__':
 
   if epochs > initial_epoch:
     cp_cb = keras.callbacks.ModelCheckpoint(
-        filepath = f'./{dir_name}'+'/weights.{epoch:04d}-{loss:.6f}-{acc:.6f}-{val_loss:.6f}-{val_acc:.6f}.hdf5' , 
-        monitor='val_loss', verbose=1, save_best_only=True, mode='auto'
+        filepath = f'./{dir_name}'+'/weights.{epoch:04d}-{loss:.6f}-{acc:.6f}-{val_loss:.6f}-{val_acc:.6f}.hdf5',
+        monitor='val_loss',
+        verbose=1,
+        save_best_only=True,
+        mode='auto',
     )
-
 
     history = model.fit_generator(
         datagen.flow(train_imgs, train_lbls, batch_size=batch_size),
@@ -65,7 +69,7 @@ if __name__ == '__main__':
         epochs=epochs,
         validation_data=(validation_imgs, validation_lbls),
         callbacks=[cp_cb],
-        verbose=verbose
+        verbose=verbose,
     )
   
   # test
