@@ -3,7 +3,7 @@ import glob, os
 import pandas as pd
 import numpy as np
 import re
-# import configparser
+import configparser
 from datetime import datetime
 dir_name = datetime.now().strftime("%y%m%d_%H%M")
 
@@ -11,9 +11,9 @@ dir_name = datetime.now().strftime("%y%m%d_%H%M")
 from loader import KMNISTDataLoader, LoadTestData
 from dataAugmentation import MyImageDataGenerator, TTA
 from networks.model import pyramidnet_bottleneck, wideresnet
+from plot_history import plot_history
 
-
-if __name__ == '__main__':
+def main():
   # load data
   datapath = "./data"
   validation_size = 0.15
@@ -42,7 +42,7 @@ if __name__ == '__main__':
   # train setting
   batch_size = 128
   initial_epoch = 0
-  epochs = 100
+  epochs = 300
   steps_per_epoch = train_imgs.shape[0] // batch_size
 
   if os.path.exists(f'./{dir_name}'):
@@ -68,6 +68,7 @@ if __name__ == '__main__':
         callbacks=[cp, reduce_lr],
         verbose=1,
     )
+    plot_history(history, csv=True, dir_name=dir_name)
   
   # test
   best_weight_path = sorted(glob.glob(f'./{dir_name}/*.hdf5'))[-1]
@@ -82,3 +83,23 @@ if __name__ == '__main__':
   submit.Label = predict_labels
 
   submit.to_csv(f"./{dir_name}/submit{dir_name}.csv", index=False)
+
+
+if __name__ == '__main__':
+  main()
+  # inifile = configparser.ConfigParser()
+  # inifile.read('./config.ini', 'UTF-8')
+
+  # start = inifile.get('period', 'start')
+  # end = inifile.get('period', 'end')
+  # num = inifile.get('interval', 'num')
+  # timescale = inifile.get('interval', 'timescale')
+  # tar_path = inifile.get('download_path', 'tar_path')
+  # bin_path = inifile.get('download_path', 'bin_path')
+
+  # dt = datetime.datetime.strptime(start, '%Y/%m/%d %H:%M:%S')
+  # dt_limit = datetime.datetime.strptime(end, '%Y/%m/%d %H:%M:%S')
+  
+  # # インスタンスを作成しダウンロード開始
+  # downloader = Downloader(tar_path, bin_path)
+
