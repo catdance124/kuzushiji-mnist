@@ -3,6 +3,7 @@ import glob, os
 import pandas as pd
 import numpy as np
 import re
+# import configparser
 from datetime import datetime
 dir_name = datetime.now().strftime("%y%m%d_%H%M")
 
@@ -24,7 +25,7 @@ if __name__ == '__main__':
   loss = keras.losses.categorical_crossentropy
   optimizer = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999)
   model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
-  model.summary()
+  # model.summary()
 
   # data generator
   datagen = MyImageDataGenerator(
@@ -41,8 +42,7 @@ if __name__ == '__main__':
   # train setting
   batch_size = 128
   initial_epoch = 0
-  epochs = 3
-  verbose = 1
+  epochs = 100
   steps_per_epoch = train_imgs.shape[0] // batch_size
 
   if os.path.exists(f'./{dir_name}'):
@@ -54,13 +54,10 @@ if __name__ == '__main__':
     os.makedirs(f'./{dir_name}', exist_ok=True)
 
   if epochs > initial_epoch:
-    cp_cb = keras.callbacks.ModelCheckpoint(
+    reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=20, verbose=1, cooldown=1, min_lr=0)
+    cp = keras.callbacks.ModelCheckpoint(
         filepath = f'./{dir_name}'+'/weights.{epoch:04d}-{loss:.6f}-{acc:.6f}-{val_loss:.6f}-{val_acc:.6f}.hdf5',
-        monitor='val_loss',
-        verbose=1,
-        save_best_only=True,
-        mode='auto',
-    )
+        monitor='val_loss', verbose=0, save_best_only=True, mode='auto')
 
     history = model.fit_generator(
         datagen.flow(train_imgs, train_lbls, batch_size=batch_size),
@@ -68,15 +65,15 @@ if __name__ == '__main__':
         initial_epoch=initial_epoch,
         epochs=epochs,
         validation_data=(validation_imgs, validation_lbls),
-        callbacks=[cp_cb],
-        verbose=verbose,
+        callbacks=[cp, reduce_lr],
+        verbose=1,
     )
   
   # test
   best_weight_path = sorted(glob.glob(f'./{dir_name}/*.hdf5'))[-1]
   model.load_weights(best_weight_path)
   
-  predicts = tta(model, test_imgs, tta_steps=30)
+  predicts = TTA(model, test_imgs, tta_steps=30)
   predict_labels = np.argmax(predicts, axis=1)
 
   # create submit file
