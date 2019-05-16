@@ -1,9 +1,9 @@
-# https://qiita.com/koshian2/items/909360f50e3dd5922f32
 from keras.preprocessing.image import ImageDataGenerator
 import numpy as np
-from tqdm import tqdm_notebook as tqdm
+from tqdm import tqdm
 
 class MyImageDataGenerator(ImageDataGenerator):
+  # 参考 https://qiita.com/koshian2/items/909360f50e3dd5922f32
   def __init__(self, featurewise_center = False, 
               samplewise_center = False, 
               featurewise_std_normalization = False, 

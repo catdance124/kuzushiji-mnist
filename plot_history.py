@@ -1,19 +1,22 @@
 from matplotlib import pyplot as plt
 import numpy as np
+import csv
 
-def plot_history(history, csv=True, dir_name=None):
-  if csv and (dir_name is not None):
+def plot_history(history, begin=2, dir_name=None, csv_output=True):
+  # csv output
+  if csv_output and (dir_name is not None):
     values = []
-    for key in history.keys():
-      values.append(history[key][0])
-    values = np.array([values])
-    with open(f'{dir_name}/history.txt', 'a') as f_handle:
-      # output header
-      np.savetxt(f_handle, values, delimiter=',')
+    for key in history.history.keys():
+      values.append(history.history[key])
+    values = np.array(values)
+    with open(f'./{dir_name}/history.csv', 'w') as f_handle:
+      writer = csv.writer(f_handle, lineterminator="\n")
+      writer.writerows([history.history.keys()])  # header
+      np.savetxt(f_handle, values.T, fmt="%.6f", delimiter=',')
   
-  # 精度の履歴をプロット
-  plt.plot(history.history['acc'])
-  plt.plot(history.history['val_acc'])
+  # plot accuracy
+  plt.plot(history.history['acc'][begin:])
+  plt.plot(history.history['val_acc'][begin:])
   plt.title('model accuracy')
   plt.xlabel('epoch')
   plt.ylabel('accuracy')
@@ -21,13 +24,13 @@ def plot_history(history, csv=True, dir_name=None):
   if dir_name is None:
     plt.show()
   else:
-    plt.savefig(f'{dir_name}/accuracy.png')
+    plt.savefig(f'./{dir_name}/accuracy.png')
 
   plt.clf()
   
-  # 損失の履歴をプロット
-  plt.plot(history.history['loss'])
-  plt.plot(history.history['val_loss'])
+  # plot loss
+  plt.plot(history.history['loss'][begin:])
+  plt.plot(history.history['val_loss'][begin:])
   plt.title('model loss')
   plt.xlabel('epoch')
   plt.ylabel('loss')

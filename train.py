@@ -1,19 +1,24 @@
 import keras
-import glob, os
+import glob, os, argparse
 import pandas as pd
 import numpy as np
 import re
 import configparser
 from datetime import datetime
-dir_name = datetime.now().strftime("%y%m%d_%H%M")
 
 # my modules
 from loader import KMNISTDataLoader, LoadTestData
-from dataAugmentation import MyImageDataGenerator, TTA
-from networks.model import pyramidnet_bottleneck, wideresnet
+from generator import MyImageDataGenerator, TTA
+from networks.model import *
 from plot_history import plot_history
 
-def main():
+def main(args):
+  # dir setting
+  dir_name = f'{args.model}_{args.batchsize}_{args.epochs}'
+  nowtime = datetime.now().strftime("%y%m%d_%H%M")
+  if args.force:
+    dir_name = f'{dir_name}_{nowtime}'
+
   # load data
   datapath = "./data"
   validation_size = 0.15
@@ -21,11 +26,11 @@ def main():
   test_imgs = LoadTestData(datapath)
 
   # define model
-  model = pyramidnet_bottleneck()
+  model = eval(f'{args.model}()')
   loss = keras.losses.categorical_crossentropy
   optimizer = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999)
   model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
-  # model.summary()
+  model.summary()
 
   # data generator
   datagen = MyImageDataGenerator(
@@ -40,9 +45,9 @@ def main():
   )
 
   # train setting
-  batch_size = 128
-  initial_epoch = 0
-  epochs = 300
+  batch_size = args.batchsize
+  initial_epoch = args.initialepoch
+  epochs = args.epochs
   steps_per_epoch = train_imgs.shape[0] // batch_size
 
   if os.path.exists(f'./{dir_name}'):
@@ -68,7 +73,7 @@ def main():
         callbacks=[cp, reduce_lr],
         verbose=1,
     )
-    plot_history(history, csv=True, dir_name=dir_name)
+    plot_history(history, dir_name=dir_name)
   
   # test
   best_weight_path = sorted(glob.glob(f'./{dir_name}/*.hdf5'))[-1]
@@ -81,25 +86,16 @@ def main():
   submit = pd.DataFrame(data={"ImageId": [], "Label": []})
   submit.ImageId = list(range(1, predict_labels.shape[0]+1))
   submit.Label = predict_labels
-
-  submit.to_csv(f"./{dir_name}/submit{dir_name}.csv", index=False)
+  submit.to_csv(f"./{dir_name}/submit{nowtime}.csv", index=False)
 
 
 if __name__ == '__main__':
-  main()
-  # inifile = configparser.ConfigParser()
-  # inifile.read('./config.ini', 'UTF-8')
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--model', default='pyramidnet_bottleneck')
+  parser.add_argument('--initialepoch', '-ie', type=int, default=0)
+  parser.add_argument('--epochs', '-e', type=int, default=300)
+  parser.add_argument('--batchsize', type=int, default=128)
+  parser.add_argument('--force', action='store_true')
+  args = parser.parse_args()
 
-  # start = inifile.get('period', 'start')
-  # end = inifile.get('period', 'end')
-  # num = inifile.get('interval', 'num')
-  # timescale = inifile.get('interval', 'timescale')
-  # tar_path = inifile.get('download_path', 'tar_path')
-  # bin_path = inifile.get('download_path', 'bin_path')
-
-  # dt = datetime.datetime.strptime(start, '%Y/%m/%d %H:%M:%S')
-  # dt_limit = datetime.datetime.strptime(end, '%Y/%m/%d %H:%M:%S')
-  
-  # # インスタンスを作成しダウンロード開始
-  # downloader = Downloader(tar_path, bin_path)
-
+  main(args)
