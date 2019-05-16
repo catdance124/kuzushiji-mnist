@@ -13,7 +13,7 @@ from plot_history import plot_history
 
 def main(args):
   # dir setting
-  dir_name = f'./out/{args.model}_b{args.batchsize}_e{args.epochs}'
+  dir_name = f'./out/{args.model}_b{args.batchsize}_e{args.epochs}_f{args.factor}_p{args.patience}'
   nowtime = datetime.now().strftime("%y%m%d_%H%M")
   if args.force:
     dir_name = f'{dir_name}_{nowtime}'
@@ -58,7 +58,8 @@ def main(args):
     os.makedirs(f'./{dir_name}', exist_ok=True)
 
   if epochs > initial_epoch:
-    reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=30, verbose=1, cooldown=1, min_lr=0)
+    reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', 
+        factor=args.factor, patience=args.patience, verbose=1, cooldown=1, min_lr=0)
     cp = keras.callbacks.ModelCheckpoint(
         filepath = f'./{dir_name}'+'/weights.{epoch:04d}-{loss:.6f}-{acc:.6f}-{val_loss:.6f}-{val_acc:.6f}.hdf5',
         monitor='val_loss', verbose=0, save_best_only=True, mode='auto')
@@ -93,7 +94,9 @@ if __name__ == '__main__':
   parser.add_argument('--model', default='pyramidnet_bottleneck')
   parser.add_argument('--initialepoch', '-ie', type=int, default=0)
   parser.add_argument('--epochs', '-e', type=int, default=300)
-  parser.add_argument('--batchsize', type=int, default=128)
+  parser.add_argument('--batchsize', '-b', type=int, default=128)
+  parser.add_argument('--factor', '-f', type=float, default=0.2)
+  parser.add_argument('--patience', '-p', type=int, default=30)
   parser.add_argument('--force', action='store_true')
   args = parser.parse_args()
 

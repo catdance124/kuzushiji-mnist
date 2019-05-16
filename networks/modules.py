@@ -41,7 +41,7 @@ def _resblock_bottleneck(n_filters1, n_filters2, strides=(1,1), SE=False):
     x = Conv2D(n_filters2, (1,1), strides=strides, kernel_initializer='he_normal', padding='same')(x)
     x = BatchNormalization()(x)
     if SE:
-      x = _SEblock(x, n_filters)
+      x = _SEblock(x, n_filters2)
     return _shortcut(input, x)
   return f
 
