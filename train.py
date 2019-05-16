@@ -3,13 +3,12 @@ import glob, os, argparse
 import pandas as pd
 import numpy as np
 import re
-import configparser
 from datetime import datetime
 
 # my modules
 from loader import KMNISTDataLoader, LoadTestData
 from generator import MyImageDataGenerator, TTA
-from networks.model import *
+from networks.models import *
 from plot_history import plot_history
 
 def main(args):
@@ -59,7 +58,7 @@ def main(args):
     os.makedirs(f'./{dir_name}', exist_ok=True)
 
   if epochs > initial_epoch:
-    reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=15, verbose=1, cooldown=1, min_lr=0)
+    reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=30, verbose=1, cooldown=1, min_lr=0)
     cp = keras.callbacks.ModelCheckpoint(
         filepath = f'./{dir_name}'+'/weights.{epoch:04d}-{loss:.6f}-{acc:.6f}-{val_loss:.6f}-{val_acc:.6f}.hdf5',
         monitor='val_loss', verbose=0, save_best_only=True, mode='auto')
