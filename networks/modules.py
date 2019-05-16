@@ -29,7 +29,7 @@ def _resblock(n_filters, strides=(1,1), SE=False):
 # bottleneck https://qiita.com/Phoeboooo/items/a1ce1dae73623f3adacc
 # https://arxiv.org/pdf/1610.02915.pdf
 # -----------------------------------------
-def _resblock_bottleneck(n_filters1, n_filters2, strides=(1,1)):
+def _resblock_bottleneck(n_filters1, n_filters2, strides=(1,1), SE=False):
   def f(input):    
     x = BatchNormalization()(input)
     x = Conv2D(n_filters1, (1,1), strides=strides, kernel_initializer='he_normal', padding='same')(x)
@@ -40,6 +40,8 @@ def _resblock_bottleneck(n_filters1, n_filters2, strides=(1,1)):
     x = Activation('relu')(x)
     x = Conv2D(n_filters2, (1,1), strides=strides, kernel_initializer='he_normal', padding='same')(x)
     x = BatchNormalization()(x)
+    if SE:
+      x = _SEblock(x, n_filters)
     return _shortcut(input, x)
   return f
 

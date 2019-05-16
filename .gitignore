@@ -1,3 +1,6 @@
+*.csv
+*.png
+
 # Networks weights
 *.hdf5
 
