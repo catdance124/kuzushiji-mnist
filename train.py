@@ -13,7 +13,8 @@ from plot_history import plot_history
 
 def main(args):
   # dir setting
-  dir_name = f'./out/{args.model}_b{args.batchsize}_e{args.epochs}_f{args.factor}_p{args.patience}'
+  setting = f'{args.model}_b{args.batchsize}_e{args.epochs}_f{args.factor}_p{args.patience}'
+  dir_name = f'./out/{setting}'
   nowtime = datetime.now().strftime("%y%m%d_%H%M")
   if args.force:
     dir_name = f'{dir_name}_{nowtime}'
@@ -25,7 +26,7 @@ def main(args):
   test_imgs = LoadTestData(datapath)
 
   # define model
-  model = eval(f'{args.model}()')
+  model = eval(f'{args.model}')
   loss = keras.losses.categorical_crossentropy
   optimizer = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999)
   model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
@@ -86,7 +87,7 @@ def main(args):
   submit = pd.DataFrame(data={"ImageId": [], "Label": []})
   submit.ImageId = list(range(1, predict_labels.shape[0]+1))
   submit.Label = predict_labels
-  submit.to_csv(f"./{dir_name}/submit{nowtime}.csv", index=False)
+  submit.to_csv(f"./{dir_name}/submit{nowtime}_{setting}.csv", index=False)
 
 
 if __name__ == '__main__':
