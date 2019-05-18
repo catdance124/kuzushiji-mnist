@@ -80,7 +80,7 @@ def main(args):
   best_weight_path = sorted(glob.glob(f'./{dir_name}/*.hdf5'))[-1]
   model.load_weights(best_weight_path)
   
-  predicts = TTA(model, test_imgs, tta_steps=30)
+  predicts = TTA(model, test_imgs, tta_steps=144)
   predict_labels = np.argmax(predicts, axis=1)
 
   # create submit file

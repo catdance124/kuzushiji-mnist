@@ -133,7 +133,9 @@ def TTA(model, X, batch_size=128, tta_steps=30):
   test_datagen = ImageDataGenerator(
       rotation_range=20,
       width_shift_range=0.1,
-      height_shift_range=0.1
+      height_shift_range=0.1,
+      shear_range=0.1,
+      zoom_range=0.08,
       )
   predictions = []
   for i in tqdm(list(range(tta_steps))):

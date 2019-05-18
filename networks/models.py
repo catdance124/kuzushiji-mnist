@@ -15,20 +15,20 @@ K.set_session(sess)
 # -----------------------------------------
 # wideresnet https://qiita.com/Phoeboooo/items/a1ce1dae73623f3adacc
 # -----------------------------------------
-def wideresnet(N=3, k=2):
+def wideresnet(N=3, k=2, SE=False):
   inputs = Input(shape=(28, 28, 1))
   x = Conv2D(16, (7,7), strides=(1,1), kernel_initializer='he_normal', padding='same')(inputs)
   x = BatchNormalization()(x)
   x = Activation('relu')(x)
   x = MaxPooling2D((3, 3), strides=(2,2), padding='same')(x)
   for i in range(N):
-    x = _resblock(n_filters=16*k)(x)
+    x = _resblock(n_filters=16*k, SE=SE)(x)
   x = MaxPooling2D(strides=(2,2))(x)
   for i in range(N):
-    x = _resblock(n_filters=32*k)(x)
+    x = _resblock(n_filters=32*k, SE=SE)(x)
   x = MaxPooling2D(strides=(2,2))(x)
   for i in range(N):
-    x = _resblock(n_filters=64*k)(x)
+    x = _resblock(n_filters=64*k, SE=SE)(x)
 
   x = GlobalAveragePooling2D()(x)
   x = Dense(10, kernel_initializer='he_normal', activation='softmax')(x)
@@ -36,7 +36,7 @@ def wideresnet(N=3, k=2):
   model = Model(inputs=inputs, outputs=x)
   return model
 
-def wideresnet_octeconv(alpha=0.5, N=3, k=2):
+def wideresnet_octconv(alpha=0.5, N=3, k=2):
   inputs = Input(shape=(28, 28, 1))
   # downsampling for lower
   low = MaxPooling2D(2, padding='same')(inputs)
@@ -61,27 +61,6 @@ def wideresnet_octeconv(alpha=0.5, N=3, k=2):
   for i in range(N-1):
     high, low = _resblock_octconv(n_filters=64*k, alpha=alpha)([high, low])
   x = _resblock_octconv(n_filters=64*k, alpha=alpha, last=True)([high, low])
-
-  x = GlobalAveragePooling2D()(x)
-  x = Dense(10, kernel_initializer='he_normal', activation='softmax')(x)
-
-  model = Model(inputs=inputs, outputs=x)
-  return model
-
-def SEwideresnet(N=3, k=2):
-  inputs = Input(shape=(28, 28, 1))
-  x = Conv2D(16, (7,7), strides=(1,1), kernel_initializer='he_normal', padding='same')(inputs)
-  x = BatchNormalization()(x)
-  x = Activation('relu')(x)
-  x = MaxPooling2D((3, 3), strides=(2,2), padding='same')(x)
-  for i in range(N):
-    x = _resblock(n_filters=16*k, SE=True)(x)
-  x = MaxPooling2D(strides=(2,2))(x)
-  for i in range(N):
-    x = _resblock(n_filters=32*k, SE=True)(x)
-  x = MaxPooling2D(strides=(2,2))(x)
-  for i in range(N):
-    x = _resblock(n_filters=64*k, SE=True)(x)
 
   x = GlobalAveragePooling2D()(x)
   x = Dense(10, kernel_initializer='he_normal', activation='softmax')(x)
