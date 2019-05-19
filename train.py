@@ -55,16 +55,18 @@ def main(args):
     random_erasing=True,
   )
 
-  # train setting
-  batch_size = args.batchsize
-  initial_epoch = args.initialepoch
-  epochs = args.epochs
-  steps_per_epoch = train_imgs.shape[0] // batch_size
+  # each model train
+  for i in range(args.ensemble):
+    # train setting
+    batch_size = args.batchsize
+    initial_epoch = args.initialepoch
+    epochs = args.epochs
+    steps_per_epoch = train_imgs.shape[0] // batch_size
 
-  if epochs > initial_epoch:
-    for i in range(args.ensemble):
+    if epochs > initial_epoch:
       if args.ensemble > 1:
         dir_name = f'{dir_name_base}/{i}'
+        model = models[i]
       if os.path.exists(f'./{dir_name}'):
         best_weight_path = sorted(glob.glob(f'./{dir_name}/*.hdf5'))[-1]
         model.load_weights(best_weight_path)
@@ -95,6 +97,7 @@ def main(args):
   for i in range(args.ensemble):
     if args.ensemble > 1:
       dir_name = f'{dir_name_base}/{i}'
+      model = models[i]
     print(f'test:{dir_name}')
 
     best_weight_path = sorted(glob.glob(f'./{dir_name}/*.hdf5'))[-1]
@@ -107,9 +110,9 @@ def main(args):
 
   if args.ensemble > 1:
     predict_labels = np.argmax(results, axis=1)
+    dir_name = dir_name_base
   else:
     predict_labels = np.argmax(predicts, axis=1)
-    dir_name = dir_name_base
 
   # create submit file
   submit = pd.DataFrame(data={"ImageId": [], "Label": []})
