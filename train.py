@@ -25,16 +25,23 @@ def main(args):
   nowtime = datetime.now().strftime("%y%m%d_%H%M")
   if args.force:
     dir_name = f'{dir_name}_{nowtime}'
+  if args.ensemble > 1:
+    dir_name_base = f'{dir_name}_ensemble{args.ensemble}'
+    models = [0]*args.ensemble
+    results = np.zeros((test_imgs.shape[0],10))
 
   # define model
-  model = eval(f'{args.model}')
-  loss = keras.losses.categorical_crossentropy
-  if args.optimizer == 'adam':
-    optimizer = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999)
-  if args.optimizer == 'adabound':
-    optimizer = AdaBound(lr=1e-03, final_lr=0.1, gamma=1e-03, weight_decay=5e-4, amsbound=False)
-  model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
-  model.summary()
+  for i in range(args.ensemble):
+    model = eval(f'{args.model}')
+    loss = keras.losses.categorical_crossentropy
+    if args.optimizer == 'adam':
+      optimizer = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999)
+    if args.optimizer == 'adabound':
+      optimizer = AdaBound(lr=1e-03, final_lr=0.1, gamma=1e-03, weight_decay=5e-4, amsbound=False)
+    model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
+    model.summary()
+    if args.ensemble > 1:
+      models.append(model)
 
   # data generator
   datagen = MyImageDataGenerator(
@@ -55,38 +62,54 @@ def main(args):
   steps_per_epoch = train_imgs.shape[0] // batch_size
 
   if epochs > initial_epoch:
-    if os.path.exists(f'./{dir_name}'):
-      best_weight_path = sorted(glob.glob(f'./{dir_name}/*.hdf5'))[-1]
-      model.load_weights(best_weight_path)
-      initial_epoch = re.search(r'weights.[0-9]{4}', best_weight_path)
-      initial_epoch = int(initial_epoch.group().replace('weights.', ''))
-    else:
-      os.makedirs(f'./{dir_name}', exist_ok=True)
+    for i in range(args.ensemble):
+      if args.ensemble > 1:
+        dir_name = f'{dir_name_base}/{i}'
+      if os.path.exists(f'./{dir_name}'):
+        best_weight_path = sorted(glob.glob(f'./{dir_name}/*.hdf5'))[-1]
+        model.load_weights(best_weight_path)
+        initial_epoch = re.search(r'weights.[0-9]{4}', best_weight_path)
+        initial_epoch = int(initial_epoch.group().replace('weights.', ''))
+      else:
+        os.makedirs(f'./{dir_name}', exist_ok=True)
+      print(f'train:{dir_name}')
 
-    reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', 
-        factor=args.factor, patience=args.patience, verbose=1, cooldown=1, min_lr=0)
-    cp = keras.callbacks.ModelCheckpoint(
-        filepath = f'./{dir_name}'+'/weights.{epoch:04d}-{loss:.6f}-{acc:.6f}-{val_loss:.6f}-{val_acc:.6f}.hdf5',
-        monitor='val_loss', verbose=0, save_best_only=True, mode='auto')
+      reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', 
+          factor=args.factor, patience=args.patience, verbose=1, cooldown=1, min_lr=0)
+      cp = keras.callbacks.ModelCheckpoint(
+          filepath = f'./{dir_name}'+'/weights.{epoch:04d}-{loss:.6f}-{acc:.6f}-{val_loss:.6f}-{val_acc:.6f}.hdf5',
+          monitor='val_loss', verbose=0, save_best_only=True, mode='auto')
 
-    history = model.fit_generator(
-        datagen.flow(train_imgs, train_lbls, batch_size=batch_size),
-        steps_per_epoch=steps_per_epoch,
-        initial_epoch=initial_epoch,
-        epochs=epochs,
-        validation_data=(validation_imgs, validation_lbls),
-        callbacks=[cp, reduce_lr],
-        verbose=1,
-    )
-    plot_history(history, dir_name=dir_name)
+      history = model.fit_generator(
+          datagen.flow(train_imgs, train_lbls, batch_size=batch_size),
+          steps_per_epoch=steps_per_epoch,
+          initial_epoch=initial_epoch,
+          epochs=epochs,
+          validation_data=(validation_imgs, validation_lbls),
+          callbacks=[cp, reduce_lr],
+          verbose=1,
+      )
+      plot_history(history, dir_name=dir_name)
   
   # test
-  best_weight_path = sorted(glob.glob(f'./{dir_name}/*.hdf5'))[-1]
-  model.load_weights(best_weight_path)
-  
-  predicts = TTA(model, test_imgs, tta_steps=144)
-  np.save(f'./{dir_name}/predicts_vec.npy', predicts)
-  predict_labels = np.argmax(predicts, axis=1)
+  for i in range(args.ensemble):
+    if args.ensemble > 1:
+      dir_name = f'{dir_name_base}/{i}'
+    print(f'test:{dir_name}')
+
+    best_weight_path = sorted(glob.glob(f'./{dir_name}/*.hdf5'))[-1]
+    model.load_weights(best_weight_path)
+    
+    predicts = TTA(model, test_imgs, tta_steps=144)
+    np.save(f'./{dir_name}/predicts_vec.npy', predicts)
+    if args.ensemble > 1:
+      results += predicts
+
+  if args.ensemble > 1:
+    predict_labels = np.argmax(results, axis=1)
+  else:
+    predict_labels = np.argmax(predicts, axis=1)
+    dir_name = dir_name_base
 
   # create submit file
   submit = pd.DataFrame(data={"ImageId": [], "Label": []})
@@ -104,6 +127,7 @@ if __name__ == '__main__':
   parser.add_argument('--batchsize', '-b', type=int, default=128)
   parser.add_argument('--factor', '-f', type=float, default=0.2)
   parser.add_argument('--patience', '-p', type=int, default=30)
+  parser.add_argument('--ensemble', type=int, default=1)
   parser.add_argument('--force', action='store_true')
   args = parser.parse_args()
 
