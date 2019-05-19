@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import re
 from datetime import datetime
+from adabound import AdaBound
 
 # my modules
 from loader import KMNISTDataLoader, LoadTestData
@@ -12,29 +13,32 @@ from networks.models import *
 from plot_history import plot_history
 
 def main(args):
-  # dir setting
-  setting = f'{args.model}_b{args.batchsize}_e{args.epochs}_f{args.factor}_p{args.patience}'
-  dir_name = f'./out/{setting}'
-  nowtime = datetime.now().strftime("%y%m%d_%H%M")
-  if args.force:
-    dir_name = f'{dir_name}_{nowtime}'
-
   # load data
   datapath = "./data"
   validation_size = 0.15
   train_imgs, train_lbls, validation_imgs, validation_lbls = KMNISTDataLoader(validation_size).load(datapath)
   test_imgs = LoadTestData(datapath)
 
+  # dir setting
+  setting = f'{args.model}_o{args.optimizer}_b{args.batchsize}_e{args.epochs}_f{args.factor}_p{args.patience}'
+  dir_name = f'./out/{setting}'
+  nowtime = datetime.now().strftime("%y%m%d_%H%M")
+  if args.force:
+    dir_name = f'{dir_name}_{nowtime}'
+
   # define model
   model = eval(f'{args.model}')
   loss = keras.losses.categorical_crossentropy
-  optimizer = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999)
+  if args.optimizer == 'adam':
+    optimizer = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999)
+  if args.optimizer == 'adabound':
+    optimizer = AdaBound(lr=1e-03, final_lr=0.1, gamma=1e-03, weight_decay=5e-4, amsbound=False)
   model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
   model.summary()
 
   # data generator
   datagen = MyImageDataGenerator(
-    rotation_range=20,
+    rotation_range=15,
     width_shift_range=0.1,
     height_shift_range=0.1,
     shear_range=0.2,
@@ -50,15 +54,15 @@ def main(args):
   epochs = args.epochs
   steps_per_epoch = train_imgs.shape[0] // batch_size
 
-  if os.path.exists(f'./{dir_name}'):
-    best_weight_path = sorted(glob.glob(f'./{dir_name}/*.hdf5'))[-1]
-    model.load_weights(best_weight_path)
-    initial_epoch = re.search(r'weights.[0-9]{4}', best_weight_path)
-    initial_epoch = int(initial_epoch.group().replace('weights.', ''))
-  else:
-    os.makedirs(f'./{dir_name}', exist_ok=True)
-
   if epochs > initial_epoch:
+    if os.path.exists(f'./{dir_name}'):
+      best_weight_path = sorted(glob.glob(f'./{dir_name}/*.hdf5'))[-1]
+      model.load_weights(best_weight_path)
+      initial_epoch = re.search(r'weights.[0-9]{4}', best_weight_path)
+      initial_epoch = int(initial_epoch.group().replace('weights.', ''))
+    else:
+      os.makedirs(f'./{dir_name}', exist_ok=True)
+
     reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', 
         factor=args.factor, patience=args.patience, verbose=1, cooldown=1, min_lr=0)
     cp = keras.callbacks.ModelCheckpoint(
@@ -81,6 +85,7 @@ def main(args):
   model.load_weights(best_weight_path)
   
   predicts = TTA(model, test_imgs, tta_steps=144)
+  np.save(f'./{dir_name}/predicts_vec.npy', predicts)
   predict_labels = np.argmax(predicts, axis=1)
 
   # create submit file
@@ -92,7 +97,8 @@ def main(args):
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
-  parser.add_argument('--model', default='pyramidnet_bottleneck')
+  parser.add_argument('--model', default='pyramidnet_bottleneck(SE=False)')
+  parser.add_argument('--optimizer', '-o', default='adam')
   parser.add_argument('--initialepoch', '-ie', type=int, default=0)
   parser.add_argument('--epochs', '-e', type=int, default=300)
   parser.add_argument('--batchsize', '-b', type=int, default=128)
