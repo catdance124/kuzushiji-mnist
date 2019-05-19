@@ -34,8 +34,10 @@ def plot_history(history, begin=2, dir_name=None, csv_output=True):
   plt.title('model loss')
   plt.xlabel('epoch')
   plt.ylabel('loss')
-  plt.legend(['loss', 'val_loss'], loc='lower right')
+  plt.legend(['loss', 'val_loss'], loc='upper right')
   if dir_name is None:
     plt.show()
   else:
     plt.savefig(f'{dir_name}/loss.png')
+
+  plt.clf()
