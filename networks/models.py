@@ -71,7 +71,7 @@ def wideresnet_octconv(alpha=0.5, N=3, k=2):
 # -----------------------------------------
 # bottleneck https://qiita.com/Phoeboooo/items/a1ce1dae73623f3adacc
 # -----------------------------------------
-def pyramidnet_bottleneck():
+def pyramidnet_bottleneck(SE=False):
   inputs = Input(shape=(28, 28, 1))
   x = Conv2D(16, (7,7), strides=(1,1), kernel_initializer='he_normal', padding='same')(inputs)
   x = BatchNormalization()(x)
@@ -79,29 +79,10 @@ def pyramidnet_bottleneck():
   x = MaxPooling2D((3, 3), strides=(2,2), padding='same')(x)
 
   for i in range(9):
-    x = _resblock_bottleneck(n_filters1=8+4*i, n_filters2=32+16*i)(x)  # -> (n_filters1=40, n_filters2=160)
+    x = _resblock_bottleneck(n_filters1=8+4*i, n_filters2=32+16*i, SE=SE)(x)  # -> (n_filters1=40, n_filters2=160)
   x = MaxPooling2D(strides=(2,2))(x) 
   for i in range(9,15):
-    x = _resblock_bottleneck(n_filters1=8+4*i, n_filters2=32+16*i)(x)  # -> (n_filters1=64, n_filters2=256)
-  
-  x = GlobalAveragePooling2D()(x)
-  x = Dense(10, kernel_initializer='he_normal', activation='softmax')(x)
-
-  model = Model(inputs=inputs, outputs=x)
-  return model
-
-def SEpyramidnet_bottleneck():
-  inputs = Input(shape=(28, 28, 1))
-  x = Conv2D(16, (7,7), strides=(1,1), kernel_initializer='he_normal', padding='same')(inputs)
-  x = BatchNormalization()(x)
-  x = Activation('relu')(x)
-  x = MaxPooling2D((3, 3), strides=(2,2), padding='same')(x)
-
-  for i in range(9):
-    x = _resblock_bottleneck(n_filters1=8+4*i, n_filters2=32+16*i, SE=True)(x)  # -> (n_filters1=40, n_filters2=160)
-  x = MaxPooling2D(strides=(2,2))(x) 
-  for i in range(9,15):
-    x = _resblock_bottleneck(n_filters1=8+4*i, n_filters2=32+16*i, SE=True)(x)  # -> (n_filters1=64, n_filters2=256)
+    x = _resblock_bottleneck(n_filters1=8+4*i, n_filters2=32+16*i, SE=SE)(x)  # -> (n_filters1=64, n_filters2=256)
   
   x = GlobalAveragePooling2D()(x)
   x = Dense(10, kernel_initializer='he_normal', activation='softmax')(x)
