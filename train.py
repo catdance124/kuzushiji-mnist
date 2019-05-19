@@ -27,7 +27,7 @@ def main(args):
     dir_name = f'{dir_name}_{nowtime}'
   if args.ensemble > 1:
     dir_name_base = f'{dir_name}_ensemble{args.ensemble}'
-    models = [0]*args.ensemble
+    models = []
     results = np.zeros((test_imgs.shape[0],10))
 
   # define model
