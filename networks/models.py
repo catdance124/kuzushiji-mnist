@@ -13,7 +13,7 @@ K.set_session(sess)
 # -----------------------------------------
 
 # -----------------------------------------
-# wideresnet https://qiita.com/Phoeboooo/items/a1ce1dae73623f3adacc
+# wideresnet: reference https://qiita.com/Phoeboooo/items/a1ce1dae73623f3adacc
 # -----------------------------------------
 def wideresnet(N=3, k=2, SE=False):
   inputs = Input(shape=(28, 28, 1))
@@ -21,12 +21,15 @@ def wideresnet(N=3, k=2, SE=False):
   x = BatchNormalization()(x)
   x = Activation('relu')(x)
   x = MaxPooling2D((3, 3), strides=(2,2), padding='same')(x)
+  # 1st
   for i in range(N):
     x = _resblock(n_filters=16*k, SE=SE)(x)
   x = MaxPooling2D(strides=(2,2))(x)
+  # 2nd
   for i in range(N):
     x = _resblock(n_filters=32*k, SE=SE)(x)
   x = MaxPooling2D(strides=(2,2))(x)
+  # 3rd
   for i in range(N):
     x = _resblock(n_filters=64*k, SE=SE)(x)
 
@@ -36,6 +39,9 @@ def wideresnet(N=3, k=2, SE=False):
   model = Model(inputs=inputs, outputs=x)
   return model
 
+# -----------------------------------------
+# octconv wide resnet: reference https://github.com/koshian2/OctConv-TFKeras/blob/master/models.py
+# -----------------------------------------
 def wideresnet_octconv(alpha=0.5, N=3, k=2):
   inputs = Input(shape=(28, 28, 1))
   # downsampling for lower
@@ -47,17 +53,17 @@ def wideresnet_octconv(alpha=0.5, N=3, k=2):
   high = Activation("relu")(high)  # (28,28)
   low = BatchNormalization()(low)
   low = Activation("relu")(low)  # (14,14)
-
+  # 1st
   for i in range(N):
     high, low = _resblock_octconv(n_filters=16*k, alpha=alpha)([high, low])
   high = MaxPooling2D(2, padding='same')(high)  # (14,14)
   low = MaxPooling2D(2, padding='same')(low)  # (7,7)
-
+  # 2nd
   for i in range(N):
     high, low = _resblock_octconv(n_filters=32*k, alpha=alpha)([high, low])
   high = MaxPooling2D(3, 2, padding='valid')(high)  # (6,6)  KEEP high//low == 2
   low = MaxPooling2D(3, 2, padding='valid')(low)  # (3,3)
-
+  # 3rd
   for i in range(N-1):
     high, low = _resblock_octconv(n_filters=64*k, alpha=alpha)([high, low])
   x = _resblock_octconv(n_filters=64*k, alpha=alpha, last=True)([high, low])

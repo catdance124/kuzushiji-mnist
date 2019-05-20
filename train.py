@@ -19,9 +19,9 @@ def main(args):
   train_imgs, train_lbls, validation_imgs, validation_lbls = KMNISTDataLoader(validation_size).load(datapath)
   test_imgs = LoadTestData(datapath)
 
-  # dir setting
-  setting = f'{args.model}_o{args.optimizer}_b{args.batchsize}_e{args.epochs}_f{args.factor}_p{args.patience}'
-  dir_name = f'./out/{setting}'
+  # dir settings
+  settings = f'{args.model}_o{args.optimizer}_b{args.batchsize}_e{args.epochs}_f{args.factor}_p{args.patience}'
+  dir_name = f'./out/{settings}'
   nowtime = datetime.now().strftime("%y%m%d_%H%M")
   if args.force:
     dir_name = f'{dir_name}_{nowtime}'
@@ -55,9 +55,9 @@ def main(args):
     random_erasing=True,
   )
 
-  # each model train
+  # train each model
   for i in range(args.ensemble):
-    # train setting
+    # train settings
     batch_size = args.batchsize
     initial_epoch = args.initialepoch
     epochs = args.epochs
@@ -67,6 +67,7 @@ def main(args):
       if args.ensemble > 1:
         dir_name = f'{dir_name_base}/{i}'
         model = models[i]
+      # load best weight if only already trained
       if os.path.exists(f'./{dir_name}'):
         best_weight_path = sorted(glob.glob(f'./{dir_name}/*.hdf5'))[-1]
         model.load_weights(best_weight_path)
@@ -74,14 +75,16 @@ def main(args):
         initial_epoch = int(initial_epoch.group().replace('weights.', ''))
       else:
         os.makedirs(f'./{dir_name}', exist_ok=True)
-      print(f'train:{dir_name}')
+      print(f'train start:{dir_name}')
 
+      # each epoch settings
       reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', 
           factor=args.factor, patience=args.patience, verbose=1, cooldown=1, min_lr=0)
       cp = keras.callbacks.ModelCheckpoint(
           filepath = f'./{dir_name}'+'/weights.{epoch:04d}-{loss:.6f}-{acc:.6f}-{val_loss:.6f}-{val_acc:.6f}.hdf5',
           monitor='val_loss', verbose=0, save_best_only=True, mode='auto')
 
+      # start training
       history = model.fit_generator(
           datagen.flow(train_imgs, train_lbls, batch_size=batch_size),
           steps_per_epoch=steps_per_epoch,
@@ -91,23 +94,27 @@ def main(args):
           callbacks=[cp, reduce_lr],
           verbose=1,
       )
+      # output history
       plot_history(history, dir_name=dir_name)
   
-  # test
+  # test each model
   for i in range(args.ensemble):
     if args.ensemble > 1:
       dir_name = f'{dir_name_base}/{i}'
       model = models[i]
-    print(f'test:{dir_name}')
+    print(f'test start:{dir_name}')
 
+    # load best weight
     best_weight_path = sorted(glob.glob(f'./{dir_name}/*.hdf5'))[-1]
     model.load_weights(best_weight_path)
     
+    # test with test time augmentation
     predicts = TTA(model, test_imgs, tta_steps=144)
     np.save(f'./{dir_name}/predicts_vec.npy', predicts)
     if args.ensemble > 1:
       results += predicts
 
+  # get argmax index
   if args.ensemble > 1:
     predict_labels = np.argmax(results, axis=1)
     dir_name = dir_name_base
@@ -118,10 +125,9 @@ def main(args):
   submit = pd.DataFrame(data={"ImageId": [], "Label": []})
   submit.ImageId = list(range(1, predict_labels.shape[0]+1))
   submit.Label = predict_labels
-  submit.to_csv(f"./{dir_name}/submit{nowtime}_{setting}.csv", index=False)
+  submit.to_csv(f"./{dir_name}/submit{nowtime}_{settings}.csv", index=False)
 
-
-if __name__ == '__main__':
+def Parser():
   parser = argparse.ArgumentParser()
   parser.add_argument('--model', default='pyramidnet_bottleneck(SE=False)')
   parser.add_argument('--optimizer', '-o', default='adam')
@@ -132,6 +138,9 @@ if __name__ == '__main__':
   parser.add_argument('--patience', '-p', type=int, default=30)
   parser.add_argument('--ensemble', type=int, default=1)
   parser.add_argument('--force', action='store_true')
-  args = parser.parse_args()
 
+  return parser
+
+if __name__ == '__main__':
+  args = Parser().parse_args()
   main(args)

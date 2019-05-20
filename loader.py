@@ -1,3 +1,4 @@
+# based on probspace's tutorial https://prob.space/competitions/kuzushiji-mnist
 import numpy as np
 import os
 from tensorflow.keras.utils import to_categorical

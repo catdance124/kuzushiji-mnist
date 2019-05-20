@@ -3,9 +3,9 @@ from keras.layers import Input, BatchNormalization, Activation, Add, Reshape, Mu
 import keras.backend as K
 
 def _shortcut(inputs, residual):
-  # _keras_shape[3] チャンネル数
+  # _keras_shape[3] number of channnels
   n_filters = residual._keras_shape[3]
-  # residual 側のフィルタ数に合わせる
+  # match the number of filters on residual side
   shortcut = Conv2D(n_filters, (1,1), strides=(1,1), padding='valid')(inputs)
   return Add()([shortcut, residual])
 
