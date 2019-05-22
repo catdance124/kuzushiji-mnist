@@ -26,9 +26,11 @@ def main(args):
   if args.force:
     dir_name = f'{dir_name}_{nowtime}'
   if args.ensemble > 1:
+    settings = f'{settings}_ensemble{args.ensemble}'
     dir_name_base = f'{dir_name}_ensemble{args.ensemble}'
     models = []
     results = np.zeros((test_imgs.shape[0],10))
+
 
   # define model
   for i in range(args.ensemble):
@@ -39,7 +41,7 @@ def main(args):
     if args.optimizer == 'adabound':
       optimizer = AdaBound(lr=1e-03, final_lr=0.1, gamma=1e-03, weight_decay=5e-4, amsbound=False)
     model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
-    model.summary()
+    # model.summary()
     if args.ensemble > 1:
       models.append(model)
 
@@ -68,14 +70,13 @@ def main(args):
         dir_name = f'{dir_name_base}/{i}'
         model = models[i]
       # load best weight if only already trained
-      if os.path.exists(f'./{dir_name}'):
+      if len(sorted(glob.glob(f'./{dir_name}/*.hdf5'))):
         best_weight_path = sorted(glob.glob(f'./{dir_name}/*.hdf5'))[-1]
         model.load_weights(best_weight_path)
         initial_epoch = re.search(r'weights.[0-9]{4}', best_weight_path)
         initial_epoch = int(initial_epoch.group().replace('weights.', ''))
       else:
         os.makedirs(f'./{dir_name}', exist_ok=True)
-      print(f'train start:{dir_name}')
 
       # each epoch settings
       reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', 
@@ -85,6 +86,7 @@ def main(args):
           monitor='val_loss', verbose=0, save_best_only=True, mode='auto')
 
       # start training
+      print(f'========train start:{dir_name}========')
       history = model.fit_generator(
           datagen.flow(train_imgs, train_lbls, batch_size=batch_size),
           steps_per_epoch=steps_per_epoch,
@@ -105,11 +107,14 @@ def main(args):
     print(f'test start:{dir_name}')
 
     # load best weight
+    if len(sorted(glob.glob(f'./{dir_name}/*.hdf5'))) > 1:
+      for p in sorted(glob.glob(f'./{dir_name}/*.hdf5'))[:-1]:
+        os.remove(p)
     best_weight_path = sorted(glob.glob(f'./{dir_name}/*.hdf5'))[-1]
     model.load_weights(best_weight_path)
     
     # test with test time augmentation
-    predicts = TTA(model, test_imgs, tta_steps=144)
+    predicts = TTA(model, test_imgs, tta_steps=50)
     np.save(f'./{dir_name}/predicts_vec.npy', predicts)
     if args.ensemble > 1:
       results += predicts
