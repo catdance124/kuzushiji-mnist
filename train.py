@@ -20,7 +20,7 @@ def main(args):
   test_imgs = LoadTestData(datapath)
 
   # dir settings
-  settings = f'{args.model}_o{args.optimizer}_b{args.batchsize}_e{args.epochs}_f{args.factor}_p{args.patience}'
+  settings = f'{args.model}_o{args.optimizer}_b{args.batchsize}_e{args.epochs}_f{args.factor}_p{args.patience}_m{args.mixup}'
   dir_name = f'./out/{settings}'
   nowtime = datetime.now().strftime("%y%m%d_%H%M")
   if args.force:
@@ -30,7 +30,6 @@ def main(args):
     dir_name_base = f'{dir_name}_ensemble{args.ensemble}'
     models = []
     results = np.zeros((test_imgs.shape[0],10))
-
 
   # define model
   for i in range(args.ensemble):
@@ -52,7 +51,7 @@ def main(args):
     height_shift_range=0.1,
     shear_range=0.2,
     zoom_range=0.08,
-    #mix_up_alpha=1.2,
+    mix_up_alpha=args.mixup,
     #random_crop=(28, 28),
     random_erasing=True,
   )
@@ -86,7 +85,7 @@ def main(args):
           monitor='val_loss', verbose=0, save_best_only=True, mode='auto')
 
       # start training
-      print(f'========train start:{dir_name}========')
+      print(f'===============train start:{dir_name}===============')
       history = model.fit_generator(
           datagen.flow(train_imgs, train_lbls, batch_size=batch_size),
           steps_per_epoch=steps_per_epoch,
@@ -143,8 +142,9 @@ def Parser():
   parser.add_argument('--patience', '-p', type=int, default=30)
   parser.add_argument('--ensemble', type=int, default=1)
   parser.add_argument('--force', action='store_true')
-
+  parser.add_argument('--mixup', '-m', type=float, default=0)
   return parser
+
 
 if __name__ == '__main__':
   args = Parser().parse_args()
