@@ -79,7 +79,7 @@ def main(args):
 
       # each epoch settings
       reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', 
-          factor=args.factor, patience=args.patience, verbose=1, cooldown=1, min_lr=0)
+          factor=args.factor, patience=args.patience, verbose=1, cooldown=1, min_lr=1e-5)
       cp = keras.callbacks.ModelCheckpoint(
           filepath = f'./{dir_name}'+'/weights.{epoch:04d}-{loss:.6f}-{acc:.6f}-{val_loss:.6f}-{val_acc:.6f}.hdf5',
           monitor='val_loss', verbose=0, save_best_only=True, mode='auto')
