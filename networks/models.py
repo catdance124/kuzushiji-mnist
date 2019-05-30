@@ -1,7 +1,7 @@
 from keras.layers import Input, Dense, BatchNormalization, Activation,\
                           Conv2D, MaxPooling2D, GlobalAveragePooling2D
 from keras.models import Model
-from .modules import _resblock, _resblock_bottleneck, _resblock_octconv, OctConv2D
+from .modules import _resblock, _resblock_bottleneck, _resblock_octconv, OctConv2D, _resblock_shake
 
 # GPU memory settings----------------------
 import tensorflow as tf
@@ -32,6 +32,33 @@ def wideresnet(N=3, k=2, SE=False, Drop=False):
   # 3rd
   for i in range(N):
     x = _resblock(n_filters=64*k, SE=SE, Drop=Drop)(x)
+
+  x = GlobalAveragePooling2D()(x)
+  x = Dense(10, kernel_initializer='he_normal', activation='softmax')(x)
+
+  model = Model(inputs=inputs, outputs=x)
+  return model
+
+# -----------------------------------------
+# wideresnet-shake: reference https://github.com/jonnedtc/Shake-Shake-Keras/blob/master/models.py
+# -----------------------------------------
+def wideresnet_shake(N=3, k=2, SE=False, Drop=False):
+  inputs = Input(shape=(28, 28, 1))
+  x = Conv2D(16, (7,7), strides=(1,1), kernel_initializer='he_normal', padding='same')(inputs)
+  x = BatchNormalization()(x)
+  x = Activation('relu')(x)
+  x = MaxPooling2D((3, 3), strides=(2,2), padding='same')(x)
+  # 1st
+  for i in range(N):
+    x = _resblock_shake(n_filters=16*k, SE=SE, Drop=Drop)(x)
+  x = MaxPooling2D(strides=(2,2))(x)
+  # 2nd
+  for i in range(N):
+    x = _resblock_shake(n_filters=32*k, SE=SE, Drop=Drop)(x)
+  x = MaxPooling2D(strides=(2,2))(x)
+  # 3rd
+  for i in range(N):
+    x = _resblock_shake(n_filters=64*k, SE=SE, Drop=Drop)(x)
 
   x = GlobalAveragePooling2D()(x)
   x = Dense(10, kernel_initializer='he_normal', activation='softmax')(x)
