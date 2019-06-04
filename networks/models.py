@@ -15,7 +15,7 @@ K.set_session(sess)
 # -----------------------------------------
 # wideresnet: reference https://qiita.com/Phoeboooo/items/a1ce1dae73623f3adacc
 # -----------------------------------------
-def wideresnet(N=3, k=2, SE=False, Drop=False):
+def wideresnet(N=3, k=2, SE=False, Drop=0.0):
   inputs = Input(shape=(28, 28, 1))
   x = Conv2D(16, (7,7), strides=(1,1), kernel_initializer='he_normal', padding='same')(inputs)
   x = BatchNormalization()(x)
@@ -29,6 +29,33 @@ def wideresnet(N=3, k=2, SE=False, Drop=False):
   for i in range(N):
     x = _resblock(n_filters=32*k, SE=SE, Drop=Drop)(x)
   x = MaxPooling2D(strides=(2,2))(x)
+  # 3rd
+  for i in range(N):
+    x = _resblock(n_filters=64*k, SE=SE, Drop=Drop)(x)
+
+  x = GlobalAveragePooling2D()(x)
+  x = Dense(10, kernel_initializer='he_normal', activation='softmax')(x)
+
+  model = Model(inputs=inputs, outputs=x)
+  return model
+
+def wideresnet_conv(N=3, k=2, SE=False, Drop=False):
+  inputs = Input(shape=(28, 28, 1))
+  x = Conv2D(16, (7,7), strides=(1,1), kernel_initializer='he_normal', padding='same')(inputs)
+  x = BatchNormalization()(x)
+  x = Activation('relu')(x)
+  x = Conv2D(16, (3,3), strides=(2,2), kernel_initializer='he_normal', padding='same')(x)
+  # x = MaxPooling2D((3, 3), strides=(2,2), padding='same')(x)
+  # 1st
+  for i in range(N):
+    x = _resblock(n_filters=16*k, SE=SE, Drop=Drop)(x)
+  x = Conv2D(16*k, (3,3), strides=(2,2), kernel_initializer='he_normal', padding='same')(x)
+  # x = MaxPooling2D(strides=(2,2))(x)
+  # 2nd
+  for i in range(N):
+    x = _resblock(n_filters=32*k, SE=SE, Drop=Drop)(x)
+  x = Conv2D(16*k, (3,3), strides=(2,2), kernel_initializer='he_normal', padding='same')(x)
+  # x = MaxPooling2D(strides=(2,2))(x)
   # 3rd
   for i in range(N):
     x = _resblock(n_filters=64*k, SE=SE, Drop=Drop)(x)

@@ -13,15 +13,15 @@ def _shortcut(inputs, residual):
 # single ReLU https://qiita.com/takedarts/items/fc6f6e96f2d0b7b55630
 # https://arxiv.org/pdf/1610.02915.pdf
 # -----------------------------------------
-def _resblock(n_filters, strides=(1,1), SE=False, Drop=False):
+def _resblock(n_filters, strides=(1,1), SE=False, Drop=0.0):
   def f(input):
     x = BatchNormalization()(input)
     # x = Activation('relu')(x)
     x = Conv2D(n_filters, (3,3), strides=strides, kernel_initializer='he_normal', padding='same')(x)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
-    if Drop:
-      x = Dropout(0.3)(x)
+    if Drop > 0:
+      x = Dropout(Drop)(x)
     x = Conv2D(n_filters, (3,3), strides=strides, kernel_initializer='he_normal', padding='same')(x)
     if SE:
       x = _SEblock(x, n_filters)
