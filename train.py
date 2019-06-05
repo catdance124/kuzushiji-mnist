@@ -15,12 +15,12 @@ from plot_history import plot_history
 def main(args):
   # load data
   datapath = "./data"
-  validation_size = 0.15
+  validation_size = args.valid
   train_imgs, train_lbls, validation_imgs, validation_lbls = KMNISTDataLoader(validation_size).load(datapath)
   test_imgs = LoadTestData(datapath)
 
   # dir settings
-  settings = f'{args.model}_o{args.optimizer}_b{args.batchsize}_e{args.epochs}_f{args.factor}_p{args.patience}_m{args.mixup}'
+  settings = f'{args.model}_o{args.optimizer}_b{args.batchsize}_e{args.epochs}_f{args.factor}_p{args.patience}_m{args.mixup}_v{args.valid}'
   dir_name = f'./out/{settings}'
   nowtime = datetime.now().strftime("%y%m%d_%H%M")
   if args.force:
@@ -143,6 +143,7 @@ def Parser():
   parser.add_argument('--ensemble', type=int, default=1)
   parser.add_argument('--force', action='store_true')
   parser.add_argument('--mixup', '-m', type=float, default=0)
+  parser.add_argument('--valid', '-v', type=float, default=0.15)
   return parser
 
 
