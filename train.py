@@ -78,11 +78,18 @@ def main(args):
         os.makedirs(f'./{dir_name}', exist_ok=True)
 
       # each epoch settings
-      reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', 
-          factor=args.factor, patience=args.patience, verbose=1, cooldown=1, min_lr=1e-5)
-      cp = keras.callbacks.ModelCheckpoint(
-          filepath = f'./{dir_name}'+'/weights.{epoch:04d}-{loss:.6f}-{acc:.6f}-{val_loss:.6f}-{val_acc:.6f}.hdf5',
-          monitor='val_loss', verbose=0, save_best_only=True, mode='auto')
+      if validation_size > 0:
+        reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', 
+            factor=args.factor, patience=args.patience, verbose=1, cooldown=1, min_lr=1e-5)
+        cp = keras.callbacks.ModelCheckpoint(
+            filepath = f'./{dir_name}'+'/weights.{epoch:04d}-{loss:.6f}-{acc:.6f}-{val_loss:.6f}-{val_acc:.6f}.hdf5',
+            monitor='val_loss', verbose=0, save_best_only=True, mode='auto')
+      else:
+        reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor='loss', 
+            factor=args.factor, patience=args.patience, verbose=1, cooldown=1, min_lr=1e-5)
+        cp = keras.callbacks.ModelCheckpoint(
+            filepath = f'./{dir_name}'+'/weights.{epoch:04d}-{loss:.6f}-{acc:.6f}.hdf5',
+            monitor='loss', verbose=0, save_best_only=True, mode='auto')
 
       # start training
       print(f'===============train start:{dir_name}===============')
