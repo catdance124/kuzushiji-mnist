@@ -4,6 +4,8 @@
 *.txt
 *.bat
 *.ini
+*.db
+*.json
 
 # Networks weights
 *.hdf5
