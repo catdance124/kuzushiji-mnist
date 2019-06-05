@@ -14,13 +14,18 @@ def plot_history(history, begin=2, dir_name=None, csv_output=True):
       writer.writerows([history.history.keys()])  # header
       np.savetxt(f_handle, values.T, fmt="%.6f", delimiter=',')
   
+
+  val_exist = 'val_acc' in history.history.keys()
   # plot accuracy
-  plt.plot(history.history['acc'][begin:])
-  plt.plot(history.history['val_acc'][begin:])
   plt.title('model accuracy')
   plt.xlabel('epoch')
   plt.ylabel('accuracy')
-  plt.legend(['acc', 'val_acc'], loc='lower right')
+  plt.plot(history.history['acc'][begin:])
+  if val_exist:
+    plt.plot(history.history['val_acc'][begin:])
+    plt.legend(['acc', 'val_acc'], loc='lower right')
+  else:
+    plt.legend(['acc'], loc='lower right')
   if dir_name is None:
     plt.show()
   else:
@@ -29,12 +34,15 @@ def plot_history(history, begin=2, dir_name=None, csv_output=True):
   plt.clf()
   
   # plot loss
-  plt.plot(history.history['loss'][begin:])
-  plt.plot(history.history['val_loss'][begin:])
   plt.title('model loss')
   plt.xlabel('epoch')
   plt.ylabel('loss')
-  plt.legend(['loss', 'val_loss'], loc='upper right')
+  plt.plot(history.history['loss'][begin:])
+  if val_exist:
+    plt.plot(history.history['val_loss'][begin:])
+    plt.legend(['loss', 'val_loss'], loc='upper right')
+  else:
+    plt.legend(['loss'], loc='upper right')
   if dir_name is None:
     plt.show()
   else:
