@@ -5,6 +5,7 @@ import numpy as np
 import re
 from datetime import datetime
 from adabound import AdaBound
+from swa import SWA
 
 # my modules
 from loader import KMNISTDataLoader, LoadTestData
@@ -21,6 +22,8 @@ def main(args):
 
   # dir settings
   settings = f'{args.model}_o{args.optimizer}_b{args.batchsize}_e{args.epochs}_f{args.factor}_p{args.patience}_m{args.mixup}_v{args.valid}'
+  if args.swa:
+    settings = f'{settings}_SWA'
   dir_name = f'./out/{settings}'
   nowtime = datetime.now().strftime("%y%m%d_%H%M")
   if args.force:
@@ -90,6 +93,10 @@ def main(args):
         cp = keras.callbacks.ModelCheckpoint(
             filepath = f'./{dir_name}'+'/weights.{epoch:04d}-{loss:.6f}-{acc:.6f}.hdf5',
             monitor='loss', verbose=0, save_best_only=True, mode='auto')
+      cbs = [reduce_lr, cp]
+      if args.swa:
+        swa = SWA(f'{dir_name}/swa.hdf5', epochs-40)
+        cbs.append(swa)
 
       # start training
       print(f'===============train start:{dir_name}===============')
@@ -99,7 +106,7 @@ def main(args):
           initial_epoch=initial_epoch,
           epochs=epochs,
           validation_data=(validation_imgs, validation_lbls),
-          callbacks=[cp, reduce_lr],
+          callbacks=cbs,
           verbose=1,
       )
       # output history
@@ -113,10 +120,14 @@ def main(args):
     print(f'test start:{dir_name}')
 
     # load best weight
-    if len(sorted(glob.glob(f'./{dir_name}/*.hdf5'))) > 1:
-      for p in sorted(glob.glob(f'./{dir_name}/*.hdf5'))[:-1]:
+    if len(sorted(glob.glob(f'./{dir_name}/weights*.hdf5'))) > 1:
+      for p in sorted(glob.glob(f'./{dir_name}/weights*.hdf5'))[:-1]:
         os.remove(p)
-    best_weight_path = sorted(glob.glob(f'./{dir_name}/*.hdf5'))[-1]
+    best_weight_path = sorted(glob.glob(f'./{dir_name}/weights*.hdf5'))[-1]
+    if args.swa:
+      print('Load SWA weights.')
+      best_weight_path = sorted(glob.glob(f'./{dir_name}/swa.hdf5'))[-1]
+    
     model.load_weights(best_weight_path)
     
     # test with test time augmentation
@@ -151,6 +162,7 @@ def Parser():
   parser.add_argument('--force', action='store_true')
   parser.add_argument('--mixup', '-m', type=float, default=0)
   parser.add_argument('--valid', '-v', type=float, default=0.15)
+  parser.add_argument('--swa', action='store_true')
   return parser
 
 
